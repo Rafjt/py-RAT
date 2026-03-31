@@ -1,0 +1,178 @@
+# =========================
+
+# Python
+
+# =========================
+
+**pycache**/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+
+# Virtual Environment
+
+# =========================
+
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# =========================
+
+# Poetry
+
+# =========================
+
+poetry.lock
+
+# (Optionnel : garde-le si vous travaillez en équipe)
+
+# poetry.lock
+
+# =========================
+
+# Logs
+
+# =========================
+
+*.log
+logs/
+rat.log
+
+# =========================
+
+# Tests / coverage
+
+# =========================
+
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.cache/
+
+# =========================
+
+# IDE / Editors
+
+# =========================
+
+# VS Code
+
+.vscode/
+
+# PyCharm
+
+.idea/
+
+# Sublime
+
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+
+# OS files
+
+# =========================
+
+# macOS
+
+.DS_Store
+
+# Windows
+
+Thumbs.db
+desktop.ini
+
+# Linux
+
+*~
+
+# =========================
+
+# Sensitive / Security
+
+# =========================
+
+# Encryption keys
+
+*.key
+secret.key
+private.pem
+public.pem
+
+# Credentials
+
+config.json
+secrets.json
+.env
+
+# =========================
+
+# Generated files (RAT outputs)
+
+# =========================
+
+screenshots/
+recordings/
+downloads/
+uploads/
+webcam/
+audio/
+
+*.png
+*.jpg
+*.jpeg
+*.wav
+*.mp3
+*.avi
+*.mp4
+
+# =========================
+
+# Temporary files
+
+# =========================
+
+tmp/
+temp/
+*.tmp
+
+# =========================
+
+# Docker (si bonus)
+
+# =========================
+
+*.pid
+*.seed
+*.pid.lock
+
+docker-compose.override.yml
+
