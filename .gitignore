@@ -8,6 +8,8 @@
 *.py[cod]
 *$py.class
 *.so
+__pycache__/
+*.log
 
 # Distribution / packaging
 
@@ -122,6 +124,8 @@ desktop.ini
 
 # Encryption keys
 
+certs/
+*.pem
 *.key
 secret.key
 private.pem
