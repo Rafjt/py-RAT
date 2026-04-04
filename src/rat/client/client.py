@@ -1,5 +1,8 @@
 import socket
 import ssl
+from utils.logger import setup_logger
+
+logger = setup_logger()
 
 
 class SSLClient:

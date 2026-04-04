@@ -4,6 +4,9 @@
 import socket
 import ssl
 from threading import Thread
+from utils.logger import setup_logger
+
+logger = setup_logger()
 
 
 class SSLServer:
@@ -19,16 +22,39 @@ class SSLServer:
         self._context.load_verify_locations(client_cert)
 
     def connect(self):
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+
             sock.bind((self.host, self.port))
+
             sock.listen(5)
+
+            print("Server listening")
+            logger.info("Server listening")
             while True:
-                conn, _ = sock.accept()
-                with self._context.wrap_socket(
-                    conn,
-                    server_side=True,
-                ) as sconn:
-                    self._recv(sconn)
+
+                conn, addr = sock.accept()
+
+                try:
+
+                    sconn = self._context.wrap_socket(
+                        conn,
+                        server_side=True,
+                    )
+
+                    print("Client connected:", addr)
+                    logger.info("Client connected:", addr)
+
+                    Thread(
+                        target=self._recv,
+                        args=(sconn,),
+                        daemon=True,
+                    ).start()
+
+                except ssl.SSLError:
+
+                    print("SSL handshake failed")
+                    logger.error("SSL handshake failed")
 
     def _recv(self, sock):
 
@@ -40,7 +66,7 @@ class SSLServer:
 
                 if not data:
                     print("Client disconnected")
-
+                    logger.warning("Client disconnected")
                     break
 
                 print(data.decode())
@@ -48,11 +74,12 @@ class SSLServer:
         except ConnectionResetError:
 
             print("Client forcibly closed connection")
+            logger.warning("Client forcibly closed connection")
 
         except ssl.SSLError:
 
             print("SSL error")
-
+            logger.error("SSL error")
         except Exception as e:
 
             print(f"Error: {e}")
