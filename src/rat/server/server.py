@@ -90,6 +90,8 @@ class SSLServer:
 
     def _handle_client(self, sock):
 
+        logger.info("Client handler started")
+
         try:
 
             while True:
@@ -99,22 +101,31 @@ class SSLServer:
                 if not command:
                     continue
 
-                sock.send(command.encode())
-                # logger.info("Server sent %s", command)
+                sock.sendall(command.encode())
+
+                logger.info("Server sent command: %s", command)
 
                 data = sock.recv(self.chunk_size)
 
                 if not data:
-                    print("Client disconnected")
+                    logger.warning("Client disconnected")
+
                     break
 
-                print(data.decode())
-                # logger.warning("Client repsponded: %s", str(data))
+                response = data.decode(errors="ignore")
+
+                print(response)
+
+                logger.info("Client responded: %s", response)
 
         except Exception as e:
-            print(f"Error: {e}")
+
+            logger.error("Client handler error: %s", e)
 
         finally:
+
+            logger.info("Closing client socket")
+
             sock.close()
 
 
