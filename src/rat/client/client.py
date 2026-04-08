@@ -71,7 +71,7 @@ class SSLClient:
                 "record_audio: Record the client's audio\n"
             )
 
-        if command == "download ":
+        if command == "download":
             return "Downloading..."
 
         else:

@@ -5,6 +5,7 @@ import socket
 import ssl
 from threading import Thread
 from utils.logger import setup_logger
+import json
 
 logger = setup_logger()
 
@@ -44,6 +45,18 @@ class SSLServer:
 
                     print("Client connected:", addr[0])
                     logger.info("Client connected: %s", addr[0])
+
+                    data = sconn.recv(self.chunk_size)
+
+                    client_info = json.loads(data.decode())
+
+                    logger.info(
+                        "New agent: %s | %s | %s | %s",
+                        client_info["hostname"],
+                        client_info["os"],
+                        client_info["user"],
+                        client_info["release"],
+                    )
 
                     Thread(
                         target=self._handle_client,

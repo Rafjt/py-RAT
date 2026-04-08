@@ -1,4 +1,6 @@
 from client.client import SSLClient
+from client.system_info import get_system_info
+import json
 
 
 def main():
@@ -12,6 +14,8 @@ def main():
     )
 
     client.connect()
+    info = get_system_info()
+    client.send(json.dumps(info))
 
     print("Connected to server")
 
