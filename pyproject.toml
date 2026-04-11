@@ -30,3 +30,7 @@ dev = [
     "black (>=26.3.1,<27.0.0)",
     "flake8 (>=7.3.0,<8.0.0)"
 ]
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E203", "W503"]
