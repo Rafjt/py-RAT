@@ -11,7 +11,7 @@ def main():
         client_cert="../../certs/cert.pem",
     )
 
-    server.connect()
+    server.start()
 
 
 if __name__ == "__main__":

