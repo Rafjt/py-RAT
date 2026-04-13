@@ -7,7 +7,7 @@ from threading import Thread
 from utils.logger import setup_logger
 import json
 from server.sessions import SessionManager
-import sys
+import os
 
 logger = setup_logger()
 
@@ -146,7 +146,7 @@ class SSLServer:
                         continue
 
                     if command == "exit":
-                        sys.exit(0)
+                        os._exit(0)
 
                     if command == "sessions":
                         self.sessions.list_sessions()
