@@ -114,7 +114,7 @@ class SSLServer:
                 if not command:
                     continue
 
-                sock.sendall(command.encode())
+                sock.sendall((command + "\n").encode())
 
                 logger.info("Server sent command: %s", command)
 

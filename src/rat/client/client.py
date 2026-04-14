@@ -40,19 +40,32 @@ class SSLClient:
         self._ssock.connect((self.server_host, self.server_port))
 
     def send(self, msg):
-        self._ssock.send(msg.encode())
+        self._ssock.sendall((msg + "\n").encode())
 
     def receive(self):
+
+        buffer = ""
+
         try:
-            data = self._ssock.recv(4096)
 
-            if not data:
-                return None
+            while True:
 
-            return data.decode()
+                data = self._ssock.recv(4096)
+
+                if not data:
+                    return None
+
+                buffer += data.decode()
+
+                if "\n" in buffer:
+                    message, buffer = buffer.split("\n", 1)
+
+                    return message.strip()
 
         except Exception as e:
+
             print(f"Receive error: {e}")
+
             return None
 
     def execute_command(self, command: str) -> str:
