@@ -40,7 +40,11 @@ class SSLClient:
         self._ssock.connect((self.server_host, self.server_port))
 
     def send(self, msg):
-        self._ssock.sendall((msg + "\n").encode())
+
+        if not msg.endswith("EOF"):
+            msg += "\nEOF"
+
+        self._ssock.sendall(msg.encode())
 
     def receive(self):
 
@@ -55,12 +59,10 @@ class SSLClient:
                 if not data:
                     return None
 
-                buffer += data.decode()
+                buffer += data.decode(errors="ignore")
 
-                if "\n" in buffer:
-                    message, buffer = buffer.split("\n", 1)
-
-                    return message.strip()
+                if "\nEOF" in buffer:
+                    return buffer.replace("\nEOF", "").strip()
 
         except Exception as e:
 
