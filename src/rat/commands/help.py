@@ -3,7 +3,7 @@ from .base_command import BaseCommand
 class HelpCommand(BaseCommand):
     name = "help"
 
-    def execute(self, args: str) -> str:
+    def execute(self, args: str, client) -> str:
         return (
             "help: Prints all the possible commands\n"
                 "download: Gather files from client and send them to server\n"
