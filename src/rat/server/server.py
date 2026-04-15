@@ -101,6 +101,31 @@ class SSLServer:
 
             sock.close()
 
+    def _save_download(self, response):
+
+        try:
+
+            lines = response.split("\n")
+
+            if lines[0] != "OK":
+                print(response)
+
+                return
+
+            content = "\n".join(lines[1:-1])
+
+            filename = "downloaded_file"
+
+            with open(filename, "w") as f:
+
+                f.write(content)
+
+            print(f"File saved: {filename}")
+
+        except Exception as e:
+
+            print("Download save error:", e)
+
     def _handle_client(self, sock):
 
         logger.info("Client handler started")
@@ -127,7 +152,13 @@ class SSLServer:
 
                 response = data.decode(errors="ignore")
 
-                print(response)
+                if response.startswith("OK\n"):
+
+                    self._save_download(response)
+
+                else:
+
+                    print(response)
 
                 logger.info("Client responded: %s", response)
 
