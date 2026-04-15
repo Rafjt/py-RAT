@@ -46,9 +46,9 @@ class SSLServer:
                     print("Client connected:", addr[0])
                     logger.info("Client connected: %s", addr[0])
 
-                    data = sconn.recv(self.chunk_size)
+                    data = self._recv_until_eof(sconn)
 
-                    client_info = json.loads(data.decode())
+                    client_info = json.loads(data)
 
                     logger.info(
                         "New agent: %s | %s | %s | %s",
@@ -139,10 +139,10 @@ class SSLServer:
 
             buffer += chunk.decode(errors="ignore")
 
-            if "EOF" in buffer:
+            if "\nEOF" in buffer:
                 break
 
-        return buffer
+        return buffer.replace("\nEOF", "").strip()
 
     def _handle_client(self, sock):
 
@@ -157,7 +157,7 @@ class SSLServer:
                 if not command:
                     continue
 
-                sock.sendall((command + "\n").encode())
+                sock.sendall((command + "\nEOF").encode())
 
                 logger.info("Server sent command: %s", command)
 
