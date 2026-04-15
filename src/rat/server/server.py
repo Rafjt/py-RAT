@@ -126,6 +126,24 @@ class SSLServer:
 
             print("Download save error:", e)
 
+    def _recv_until_eof(self, sock):
+
+        buffer = ""
+
+        while True:
+
+            chunk = sock.recv(self.chunk_size)
+
+            if not chunk:
+                break
+
+            buffer += chunk.decode(errors="ignore")
+
+            if "EOF" in buffer:
+                break
+
+        return buffer
+
     def _handle_client(self, sock):
 
         logger.info("Client handler started")
@@ -143,14 +161,12 @@ class SSLServer:
 
                 logger.info("Server sent command: %s", command)
 
-                data = sock.recv(self.chunk_size)
+                response = self._recv_until_eof(sock)
 
-                if not data:
+                if not response:
                     logger.warning("Client disconnected")
 
                     break
-
-                response = data.decode(errors="ignore")
 
                 if response.startswith("OK\n"):
 
