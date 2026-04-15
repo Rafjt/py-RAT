@@ -157,6 +157,7 @@ audio/
 *.mp3
 *.avi
 *.mp4
+downloaded_file
 
 # =========================
 
