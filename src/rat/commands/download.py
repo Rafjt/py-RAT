@@ -27,8 +27,7 @@ class DownloadCommand(BaseCommand):
         try:
 
             data = path.read_bytes()
-
-            return "OK\n" + data.decode(errors="ignore") + "\nEOF"
+            return "DOWNLOAD\nOK\n" + data.decode(errors="ignore") + "\nEOF"
 
         except Exception as e:
 
