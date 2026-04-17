@@ -27,7 +27,8 @@ class TestDownloadCommand(unittest.TestCase):
 
         result = self.cmd.execute("/tmp/test.txt")
 
-        self.assertTrue(result.startswith("OK"))
+        self.assertTrue(result.startswith("DOWNLOAD"))
+        self.assertIn("OK", result)
         self.assertIn("hello world", result)
         self.assertTrue(result.endswith("EOF"))
 
