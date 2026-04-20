@@ -2,8 +2,8 @@ import socket
 import ssl
 from utils.logger import setup_logger
 from commands.command_registry import CommandRegistry
-
-# import subprocess
+import base64
+from pathlib import Path
 
 logger = setup_logger()
 
@@ -34,45 +34,35 @@ class SSLClient:
 
     def connect(self):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._ssock = self._context.wrap_socket(
-            self._sock,
-        )
+        self._ssock = self._context.wrap_socket(self._sock)
         self._ssock.connect((self.server_host, self.server_port))
 
     def send(self, msg):
-
+        """Send a length‑prefixed message."""
         data = msg.encode()
-
         size = str(len(data)).encode() + b"\n"
-
         self._ssock.sendall(size)
-
         self._ssock.sendall(data)
 
     def receive(self):
-
+        """Receive a length‑prefixed message."""
         size_data = b""
-
         while not size_data.endswith(b"\n"):
-
             chunk = self._ssock.recv(1)
-
             if not chunk:
                 return None
-
             size_data += chunk
 
-        size = int(size_data.strip())
+        try:
+            size = int(size_data.strip())
+        except ValueError:
+            return None
 
         buffer = b""
-
         while len(buffer) < size:
-
-            chunk = self._ssock.recv(4096)
-
+            chunk = self._ssock.recv(min(4096, size - len(buffer)))
             if not chunk:
                 return None
-
             buffer += chunk
 
         return buffer.decode(errors="ignore")
