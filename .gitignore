@@ -159,6 +159,7 @@ audio/
 *.mp4
 downloaded_file
 keylogger_file
+screenshot*
 
 # =========================
 

