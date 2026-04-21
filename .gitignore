@@ -157,8 +157,8 @@ audio/
 *.mp3
 *.avi
 *.mp4
-downloaded_file
-keylogger_file
+downloaded_file*
+keylogger_file*
 screenshot*
 
 # =========================
