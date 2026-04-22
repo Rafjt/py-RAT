@@ -41,34 +41,41 @@ class SSLClient:
 
     def send(self, msg):
 
-        if not msg.endswith("EOF"):
-            msg += "\nEOF"
+        data = msg.encode()
 
-        self._ssock.sendall(msg.encode())
+        size = str(len(data)).encode() + b"\n"
+
+        self._ssock.sendall(size)
+
+        self._ssock.sendall(data)
 
     def receive(self):
 
-        buffer = ""
+        size_data = b""
 
-        try:
+        while not size_data.endswith(b"\n"):
 
-            while True:
+            chunk = self._ssock.recv(1)
 
-                data = self._ssock.recv(4096)
+            if not chunk:
+                return None
 
-                if not data:
-                    return None
+            size_data += chunk
 
-                buffer += data.decode(errors="ignore")
+        size = int(size_data.strip())
 
-                if "\nEOF" in buffer:
-                    return buffer.replace("\nEOF", "").strip()
+        buffer = b""
 
-        except Exception as e:
+        while len(buffer) < size:
 
-            print(f"Receive error: {e}")
+            chunk = self._ssock.recv(4096)
 
-            return None
+            if not chunk:
+                return None
+
+            buffer += chunk
+
+        return buffer.decode(errors="ignore")
 
     def execute_command(self, command: str) -> str:
         command = command.strip()

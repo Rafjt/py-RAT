@@ -1,4 +1,4 @@
-from server.server import SSLServer
+from server.server import SSLServer, SSLServerThread
 
 
 def main():
@@ -11,7 +11,11 @@ def main():
         client_cert="../../certs/cert.pem",
     )
 
-    server.connect()
+    server_thread = SSLServerThread(server)
+
+    server_thread.start()
+
+    server.run_console()
 
 
 if __name__ == "__main__":
