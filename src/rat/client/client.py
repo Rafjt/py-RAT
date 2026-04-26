@@ -83,6 +83,15 @@ class SSLClient:
         if not command:
             return "Empty command"
 
+        if command == "exit":
+            logger.info("Exit command received")
+
+            self.close()
+
+            import sys
+
+            sys.exit(0)
+
         parts = command.split(" ", 1)
         cmd_name = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""

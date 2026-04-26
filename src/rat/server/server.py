@@ -289,6 +289,59 @@ class SSLServer:
                 e = str(e)
                 pass
 
+    def _handle_kill(self, command):
+
+        try:
+
+            parts = command.split()
+
+            if len(parts) != 2:
+                print("Usage: kill <session_id>")
+                return
+
+            session_id = int(parts[1])
+
+        except ValueError:
+
+            print("Invalid session id")
+            return
+
+        session = self._sessions.get_session(session_id)
+
+        if not session:
+            print("Session not found")
+            return
+
+        sock = session.sock
+
+        try:
+            data = b"exit"
+
+            size = str(len(data)).encode() + b"\n"
+
+            sock.sendall(size)
+
+            sock.sendall(data)
+
+        except Exception:
+
+            pass
+
+        try:
+
+            sock.close()
+
+        except Exception as e:
+            e = str(e)
+            pass
+
+        self._sessions.remove_session(session_id)
+
+        print(f"Session {session_id} terminated")
+
+        logger.info("Session %s killed", session_id)
+
+    # ------------- Main interactive console -------------
     def run_console(self):
 
         while self._running:
@@ -319,6 +372,9 @@ class SSLServer:
             if command.startswith("use "):
                 self._handle_use(command)
 
+                continue
+            if command.startswith("kill"):
+                self._handle_kill(command)
                 continue
 
             self._send_to_active_session(command)
