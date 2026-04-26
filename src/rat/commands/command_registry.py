@@ -6,6 +6,7 @@ from .upload import UploadCommand
 from .screenshot import ScreenshotCommand
 from .search import SearchCommand
 from .hashdump import HashdumpCommand
+from .search import SearchCommand
 
 
 class CommandRegistry:
@@ -20,6 +21,7 @@ class CommandRegistry:
         self.register(ScreenshotCommand())
         self.register(SearchCommand())
         self.register(HashdumpCommand())
+        self.register(SearchCommand())
 
     def register(self, command):
         self.commands[command.name] = command
