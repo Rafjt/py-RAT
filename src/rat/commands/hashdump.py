@@ -1,8 +1,6 @@
 import platform
-import subprocess
-import base64
-import tempfile
 import os
+import subprocess
 from pathlib import Path
 from rat.commands.base_command import BaseCommand
 
