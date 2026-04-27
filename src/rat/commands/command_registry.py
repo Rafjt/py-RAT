@@ -7,6 +7,7 @@ from .screenshot import ScreenshotCommand
 from .search import SearchCommand
 from .hashdump import HashdumpCommand
 from .shell import ShellCommand
+from .record_audio import AudioRecordCommand
 
 
 class CommandRegistry:
@@ -22,6 +23,7 @@ class CommandRegistry:
         self.register(SearchCommand())
         self.register(HashdumpCommand())
         self.register(ShellCommand())
+        self.register(AudioRecordCommand())
 
     def register(self, command):
         self.commands[command.name] = command
