@@ -17,6 +17,7 @@ def _build_upload_payload(command: str) -> str:
 
         data = path.read_bytes()
         encoded = base64.b64encode(data).decode()
-        return f"upload {dst}\n{encoded}\nEOF"
+        # ❌ Do NOT add \nEOF here – length‑prefixed protocol handles boundaries
+        return f"upload {dst}\n{encoded}"
     except Exception as e:
         return f"ERROR: {e}"
