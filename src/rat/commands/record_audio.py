@@ -27,4 +27,4 @@ class AudioRecordCommand(BaseCommand):
                 return f"AUDIO\nERROR\n{e}\nEOF"
 
         else:
-            return "Usage: audio_record start|stop"
+            return "Usage: record_audio start|stop"
