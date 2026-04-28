@@ -1,9 +1,8 @@
 import socket
 import ssl
-from utils.logger import setup_logger
-from commands.command_registry import CommandRegistry
-import base64
-from pathlib import Path
+from rat.utils.logger import setup_logger
+from rat.commands.command_registry import CommandRegistry
+
 
 logger = setup_logger()
 
