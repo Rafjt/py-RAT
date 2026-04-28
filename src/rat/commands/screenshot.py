@@ -1,4 +1,4 @@
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
 from rat.client.screenshot_service import ScreenshotService
 import base64
 
