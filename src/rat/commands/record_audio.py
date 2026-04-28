@@ -1,6 +1,6 @@
 import base64
 from .base_command import BaseCommand
-from .client.audio_recorder import recorder
+from ..client.audio_recorder import recorder
 
 
 class AudioRecordCommand(BaseCommand):
