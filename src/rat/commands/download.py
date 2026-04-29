@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
 
 
 class DownloadCommand(BaseCommand):

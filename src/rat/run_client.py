@@ -1,5 +1,5 @@
-from client.client import SSLClient
-from utils.logger import setup_logger
+from rat.client.client import SSLClient
+from rat.utils.logger import setup_logger
 import json
 import platform
 import socket
@@ -24,8 +24,8 @@ def main():
         server_host="127.0.0.1",
         server_port=8888,
         sni_hostname="localhost",
-        client_cert="../../certs/cert.pem",
-        client_key="../../certs/key.pem",
+        client_cert="certs/cert.pem",
+        client_key="certs/key.pem",
     )
 
     try:

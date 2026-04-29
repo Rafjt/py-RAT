@@ -1,6 +1,7 @@
 from pathlib import Path
 import base64
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
+
 
 class UploadCommand(BaseCommand):
     name = "upload"
@@ -18,7 +19,7 @@ class UploadCommand(BaseCommand):
             # 🔧 Auto‑repair missing base64 padding
             missing = len(encoded) % 4
             if missing:
-                encoded += '=' * (4 - missing)
+                encoded += "=" * (4 - missing)
 
             # Handle empty file (empty string becomes b"")
             data = base64.b64decode(encoded) if encoded else b""

@@ -1,6 +1,6 @@
 import platform
 import subprocess
-from rat.commands.base_command import BaseCommand
+from .base_command import BaseCommand
 
 
 class IPConfigCommand(BaseCommand):

