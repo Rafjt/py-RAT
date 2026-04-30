@@ -1,3 +1,5 @@
+# Fichier helper permettant de guider les
+# Utilisateurs au cours de leurs utilisation de py-RAT
 from .base_command import BaseCommand
 
 
