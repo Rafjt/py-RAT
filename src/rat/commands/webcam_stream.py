@@ -29,7 +29,7 @@ class WebcamStreamCommand:
         # Normalisation des arguments
         args = args.strip().lower()
 
-        # ---------------- START STREAM ----------------
+        #  START STREAM
         if args == "start":
 
             # Empêche le double démarrage
@@ -45,7 +45,7 @@ class WebcamStreamCommand:
 
             return "STREAM\nOK\nStarted"
 
-        # ---------------- STOP STREAM ----------------
+        #  STOP STREAM
         if args == "stop":
 
             # Vérifie que le stream est actif
