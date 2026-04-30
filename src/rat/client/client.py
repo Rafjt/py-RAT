@@ -23,7 +23,7 @@ class SSLClient:
         self._context.load_cert_chain(client_cert, client_key)
         self._sock = None
         self._ssock = None
-        self.registry = CommandRegistry()
+        self.registry = CommandRegistry(self)
 
     def close(self):
         if self._ssock:
